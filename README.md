@@ -12,8 +12,9 @@ request - HTTP request string to send (can be any type of request, try stress te
 response - buffer where the function writes the server response
 resp_size - size of the response buffer
 showdebug - set to 1 to see some information. Or you can just set it to 0.
-tls_connect(const char *host, uint16_t port, const char *request,
-                unsigned char *response, size_t resp_size, int showdebug);
+preset - set to 0 for total control, set to 1 for an easy experience with HTTP GET. set to 2 for HTTP OPTIONS, set to 3 for HTTP POST.
+int tls_connect(const char *host, uint16_t port, const char *request, const char *body,
+                unsigned char *response, size_t resp_size, int showdebug, int preset);
 
 As with any code, you can make errors, or maybe the network isn't on your side today. The function will let you know of these.
 ERR LIST:
@@ -29,4 +30,5 @@ ERR LIST:
 -10: Certificate could not be parsed (different from verification).
 -11: DRBG could not initiate.
 -12: TLS handshake timed out. This doesn't actually mean much sinister, but check your internet connection.
+-13: Bad preset. Body cannot be NULL if preset == 3 (HTTP POST). You also cannot set presets higher than 3 and lower than 0.
 Errors -11 and -12 occur during module_start() and may prevent module initialization.
