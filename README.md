@@ -32,3 +32,19 @@ ERR LIST:
 -12: TLS handshake timed out. This doesn't actually mean much sinister, but check your internet connection.
 -13: Bad preset. Body cannot be NULL if preset == 3 (HTTP POST). You also cannot set presets higher than 3 and lower than 0.
 Errors -11 and -12 occur during module_start() and may prevent module initialization.
+
+Oh! and I forgot!
+Here is the export table.
+
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0, 0x8000)
+PSP_EXPORT_FUNC(module_start)
+PSP_EXPORT_VAR(module_info)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(psp_tls, 0, 0x2321)
+PSP_EXPORT_FUNC_NID(tls_connect, 0x02324501)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS
