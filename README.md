@@ -1,50 +1,27 @@
-As of Jan 2026, this code is completely untested.
-tls4psp allows you to make HTTP calls through TLS 1.2 ECDHE. It's pretty much the bare minimum, but infinitely better than the current stack.
-BUT, there is always a catch.
-This cannot change existing Sony functions. This will not revive the browser on its own.
-So what does it do?
-It allows YOU to do that.
-You call tls_connect() to make HTTP requests inside your program. It works in one shot. You cannot run two at once.
-anatomy of tls_connect():
-host - string of the server IP or hostname
-port - port number (usually 443 for HTTPS, but you can be lazy and pass 0 to automatically do 443. Do not pass NULL. Please pass a valid port.)
-request - HTTP request string to send (can be any type of request, try stress testing it)
-response - buffer where the function writes the server response
-resp_size - size of the response buffer
-showdebug - set to 1 to see some information. Or you can just set it to 0.
-preset - set to 0 for total control, set to 1 for an easy experience with HTTP GET. set to 2 for HTTP OPTIONS, set to 3 for HTTP POST.
-int tls_connect(const char *host, uint16_t port, const char *request, const char *body,
-                unsigned char *response, size_t resp_size, int showdebug, int preset);
+This code was tested in an emulator. May suffer on real hardware.
+tls4psp is a STATIC LIBRARY that allows for TLS connections and a variety of requests.
+It is made for compilation. You use the .h and compile just one file, the .a. But it requires specific psp libs to be linked IN YOUR EBOOT.PBP, SEPERATELY OF THE LIBRARY!
+Namely:
+    pspnet
+    pspnet_inet
+    pspnet_resolver
+    pspuser
+    psppower
+    pspnet_apctl
+Now, other than that, it is designed to be relatively low friction.
+Your 3 commands:
+int tls_init(void);
 
-As with any code, you can make errors, or maybe the network isn't on your side today. The function will let you know of these.
-ERR LIST:
--1: Network socket was not created.
--2: Could not connect to server.
--3: TLS handshake failed.
--4: Certificate could not be verified.
--5: Failed to create resolver for hostname.
--6: Resolver was made, but could not resolve hostname.
--7: Failed to send GET request.
--8: Failed to initialize SSL.
--9: Overflow risk (buffer passed by the user is too small)
--10: Certificate could not be parsed (different from verification).
--11: DRBG could not initiate.
--12: TLS handshake timed out. This doesn't actually mean much sinister, but check your internet connection.
--13: Bad preset. Body cannot be NULL if preset == 3 (HTTP POST). You also cannot set presets higher than 3 and lower than 0.
-Errors -11 and -12 occur during module_start() and may prevent module initialization.
+int tls_connect(const char *host,
+                uint16_t port,
+                const char *request,
+                const char *body,
+                unsigned char *response,
+                size_t resp_size,
+                int showdebug,
+                int preset);
 
-Oh! and I forgot!
-Here is the export table.
-
-PSP_BEGIN_EXPORTS
-
-PSP_EXPORT_START(syslib, 0, 0x8000)
-PSP_EXPORT_FUNC(module_start)
-PSP_EXPORT_VAR(module_info)
-PSP_EXPORT_END
-
-PSP_EXPORT_START(psp_tls, 0, 0x2321)
-PSP_EXPORT_FUNC_NID(tls_connect, 0x02324501)
-PSP_EXPORT_END
-
-PSP_END_EXPORTS
+int tls_destroy(void);
+You call tls_init, tls_connect, and tls_destroy, in that order. This will be smoothed out in future versions.
+This uses very hard ciphers and curves for the Allegrex. This means there is a lot of compatibility, but handshakes can take up to 20 seconds!
+Testing shows roughly 10 - 15 seconds, but you never know.
