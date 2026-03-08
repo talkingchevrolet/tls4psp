@@ -9,7 +9,7 @@ Namely:
     psppower
     pspnet_apctl
 Now, other than that, it is designed to be relatively low friction.
-Your 3 commands:
+Your 4 commands:
 int tls_init(void);
 
 int tls_connect(const char *host,
@@ -22,6 +22,10 @@ int tls_connect(const char *host,
                 int preset);
 
 int tls_destroy(void);
-You call tls_init, tls_connect, and tls_destroy, in that order. This will be smoothed out in future versions.
+IF USING TLS4PSP ABOVE 1.5
+void tls_set_lightweight(int enable)
+You call tls_init, tls_connect, and tls_destroy, in that order. This has been smoothed out. When using tls4psp above 1.5, you can simply call tls_init(), and then tls_connect() as many times as you want, before going to tls_destroy().
 This uses very hard ciphers and curves for the Allegrex. This means there is a lot of compatibility, but handshakes can take up to 20 seconds!
 Testing shows roughly 10 - 15 seconds, but you never know.
+Luckily, for more efficiency, on versions above 1.5, you can call tls_set_lightweight(1) to use lighter ChaChaPoly ciphers.
+It does not meaningfully impact handshake time on it's own, but increases CPU efficiency.
