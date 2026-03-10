@@ -29,3 +29,4 @@ This uses very hard ciphers and curves for the Allegrex. This means there is a l
 Testing shows roughly 10 - 15 seconds, but you never know.
 Luckily, for more efficiency, on versions above 1.0.5, you can call tls_set_lightweight(1) to use lighter ChaChaPoly ciphers.
 It does not meaningfully impact handshake time on it's own, but increases CPU efficiency.
+On versions above 1.0.5, handshake time was reduced from 10 - 15 seconds to 3 - 5 seconds.
