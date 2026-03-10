@@ -34,3 +34,29 @@ Testing shows roughly 10 - 15 seconds, but you never know.
 Luckily, for more efficiency, on versions above 1.0.5, you can call tls_set_lightweight(1) to use lighter ChaChaPoly ciphers, and sequential tls_connect calls as well.
 ChaChaPoly increases CPU efficiency, and the ability to run sequential tls_connect() calls without tls_destroy() directly cuts connection times.
 On versions above 1.0.5, handshake time was reduced from 10 - 15 seconds to 3 - 5 seconds.
+
+EXAMPLES:
+    int bytes1 = tls_connect(
+        "www.letsencrypt.org",
+        443,
+        "/",
+        NULL,
+        response1,
+        sizeof(response1) - 1,
+        1,
+        1
+    );
+    NOTE: body can be set to NULL because preset 1 is used (GET). Body is only needed for POST.
+    "/" just means there is nothing else to the url. When doing google.com/humans.txt, for example, /humans.txt would be where / is.
+    to show my point further:
+        int bytes2 = tls_connect(
+        "www.postman-echo.com",
+        443,
+        "/gzip",
+        NULL,
+        response2,
+        sizeof(response2) - 1,
+        1,
+        1
+    );
+    NOTE: gzip support is only for tls4psp v1.2.7
