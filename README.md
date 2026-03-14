@@ -64,3 +64,11 @@ EXAMPLES:
         1
     );
     NOTE: gzip support is only for tls4psp v1.2.7
+
+
+    CERTIFICATES:
+    older tls4psp versions will see the error -9984 often with tls_connect().
+    That is a certificate error caused by a lack of root certificates in those versions.
+    tls4psp V1.2.8 and higher have 11 root certificates, from Let's Encrypt, DigiCert, and Google.
+    older models only have 9 root certificates,  from the same 3 providers.
+    Even on the latest versions, it is not enough to see the entire web with.
