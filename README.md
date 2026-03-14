@@ -35,6 +35,10 @@ Luckily, for more efficiency, on versions above 1.0.5, you can call tls_set_ligh
 ChaChaPoly increases CPU efficiency, and the ability to run sequential tls_connect() calls without tls_destroy() directly cuts connection times.
 On versions above 1.0.5, handshake time was reduced from 10 - 15 seconds to 3 - 5 seconds.
 
+Fill a response buffer with the amount of bytes to be filled.
+For example,
+static unsigned char response[65536]; would allocate 64KB of space for the response.
+Do not read the result directly from tls_connect, as that will only show you the amount of bytes it recieved, or an error code. Read from the response buffer.
 EXAMPLES:
     int bytes1 = tls_connect(
         "www.letsencrypt.org",
