@@ -72,3 +72,20 @@ EXAMPLES:
     tls4psp V1.2.8 and higher have 11 root certificates, from Let's Encrypt, DigiCert, and Google.
     older models only have 9 root certificates,  from the same 3 providers.
     Even on the latest versions, it is not enough to see the entire web with.
+
+    GZIP:
+    It is 100% supported, but sometimes you might see errors. If you see the HTTP headers, there is your error.
+    While error handling is a bit opaque, there are only 3 possible causes.
+    A: Bad data. The website simply isn't sending proper gzip.
+    B: The data would overrun the response buffer. Try allocating a bigger response.
+    C: Short output. Whatever it would have outputted would overflow. Has not been encountered so far. Be sane with your responses, please!
+    NOTE: Headers are not present when gzip handling succeeds. You will simply get the body.
+
+    HTTP:
+    GET (preset 1) OPTIONS (preset 2) and POST (preset 3).
+    GET and OPTIONS do not need the body variable. Set it to NULL.
+    POST does need it. DO NOT SET BODY TO NULL WHEN USING POST.
+
+    SOCKETS:
+    Sockets are for now blocking. This helps prevent a lot of race conditions, but it also means your program might be frozen for a few seconds while the handshake completes.
+    
