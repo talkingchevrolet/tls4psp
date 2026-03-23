@@ -85,6 +85,7 @@ EXAMPLES:
     GET (preset 1) OPTIONS (preset 2) and POST (preset 3).
     GET and OPTIONS do not need the body variable. Set it to NULL.
     POST does need it. DO NOT SET BODY TO NULL WHEN USING POST.
+    Note: If tls_connect() returns 0, this is most likely because the server rejected your request or sent an encoding which isn't supported. The only solution is to try again later.
 
     SOCKETS:
     Sockets are for now blocking. This helps prevent a lot of race conditions, but it also means your program might be frozen for a few seconds while the handshake completes.
