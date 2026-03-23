@@ -1,0 +1,151 @@
+#include <pspkernel.h>
+#include <pspdebug.h>
+#include <psploadexec_kernel.h>
+#include <pspdisplay.h>
+#include <string.h>
+#include <stdint.h>
+#include "tls4psp.h"
+
+PSP_MODULE_INFO("TLSTest", 0, 1, 0);
+PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
+PSP_HEAP_SIZE_KB(3072);
+PSP_MAIN_THREAD_STACK_SIZE_KB(512);
+// Exit callback
+int exit_callback(int arg1, int arg2, void *common) {
+    sceKernelExitGame();
+    return 0;
+}
+
+int callback_thread(SceSize args, void *argp) {
+    int cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
+    sceKernelRegisterExitCallback(cbid);
+    sceKernelSleepThreadCB();
+    return 0;
+}
+
+int setup_callbacks(void) {
+    int thid = sceKernelCreateThread(
+        "callback_thread",
+        callback_thread,
+        0x11,
+        0xFA0,
+        0,
+        0
+    );
+    if (thid >= 0)
+        sceKernelStartThread(thid, 0, NULL);
+    return thid;
+}
+//int tls4psp_lightweight_ciphers = 1; //setting chachapoly ciphers
+
+/* ---- TLS PRX import ---- */
+/* This MUST be provided by tls4psp_stub.o */
+int tls_connect(
+    const char *host,
+    uint16_t port,
+    const char *request,
+    const char *body,
+    unsigned char *response,
+    size_t resp_size,
+    int showdebug,
+    int preset
+);
+
+int main(void) {
+    setup_callbacks();
+    int enable = 1;
+    tls4psp_set_lightweight(enable); //setting up chachapoly here
+    pspDebugScreenInit();
+    pspDebugScreenClear();
+    pspDebugScreenSetXY(0, 0);
+    pspDebugScreenPrintf("#1: There\n");
+
+    unsigned char response[2048];
+    memset(response, 0, sizeof(response));
+    int setup = tls_init();
+    int bytes = tls_connect(
+        "www.letsencrypt.org",
+        443,
+        "/",
+        NULL,
+        response,
+        sizeof(response) - 1,
+        1,
+        1
+    );
+
+    if (bytes <= 0) {
+        pspDebugScreenPrintf("tls_connect failed (%d)\n", bytes);
+        sceKernelSleepThread();
+    }
+
+    response[bytes] = '\0';
+    pspDebugScreenPrintf(
+        "#2: TLS response (%d bytes):\n%s\n",
+        bytes,
+        response
+    );
+
+    sceKernelDelayThread(5 * 1000 * 1000);
+    tls_destroy();
+    pspDebugScreenClear();
+    pspDebugScreenSetXY(0, 0);
+    pspDebugScreenPrintf("#1: There for round 2! this time we test gzip.\n");
+    unsigned char response1[2048];
+    memset(response1, 0, sizeof(response1));
+    int setup1 = tls_init();
+    int bytes1 = tls_connect(
+        "www.postman-echo.com",
+        443,
+        "/gzip",
+        NULL,
+        response1,
+        sizeof(response1) - 1,
+        1,
+        1
+    );
+    if (bytes1 <= 0) {
+        pspDebugScreenPrintf("tls_connect failed (%d)\n", bytes1);
+        sceKernelSleepThread();
+    }
+
+    response[bytes1] = '\0';
+    pspDebugScreenPrintf(
+        "#2: TLS response (%d bytes):\n%s\n",
+        bytes1,
+        response1
+    );
+    sceKernelDelayThread(5 * 1000 * 1000);
+     pspDebugScreenClear();
+    pspDebugScreenSetXY(0, 0);
+    pspDebugScreenPrintf("#1: There for round 3, technically this fails due to a too small buffer, but you will see headers.\n");
+    unsigned char response2[2048];
+    memset(response2, 0, sizeof(response2));
+    int setup2 = tls_init();
+    int bytes2 = tls_connect(
+        "www.cbc.ca",
+        443,
+        "/webfeed/rss/rss-topstories",
+        NULL,
+        response2,
+        sizeof(response2) - 1,
+        1,
+        1
+    );
+    if (bytes2 <= 0) {
+        pspDebugScreenPrintf("tls_connect failed (%d)\n", bytes2);
+        sceKernelSleepThread();
+    }
+
+    response2[bytes2] = '\0';
+    pspDebugScreenPrintf(
+        "#2: TLS response (%d bytes):\n%s\n",
+        bytes2,
+        response2
+    );
+    while (1) {
+      sceDisplayWaitVblankStart();
+    }
+
+    return 0;
+} //note that the first two connections move a lot slower because we call tls_destroy() after each one. That is no longer required on newer versions of tls4psp.
