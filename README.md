@@ -68,5 +68,16 @@ Now, you are all set, but what if you encounter errors?
 #define PARSE_ERR_GZIP_DECOMPRESSOR_NO_MEM -100 //No free RAM to give the gzip decompressor. Should never happen.
 #define PARSE_ERR_GZIP_PRODUCT_NO_MEM      -101 //Not enough free RAM to store the product of decompression. Should never happen.
 
+
+To compile:
+Compile the static library in and include the .h file.
+You must also compile with lc, lgcc, and these PSPSDK libs:
+    pspnet
+    pspnet_inet
+    pspnet_resolver
+    pspuser
+    psppower
+    pspnet_apctl
+And then it should compile normally in a makefile.
 Note: This is NOT thread-safe, and it is blocking. For doing multi-threaded operations, it is best to have a workaround, like mutexes, global buffers, it is up to you.
 Connections are closed after each request (no keep-alive support).
