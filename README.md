@@ -28,6 +28,18 @@ IF USING TLS4PSP ABOVE 1.0.5
 
 void tls_set_lightweight(int enable)
 
+IF USING TLS4PSP 1.3.8 AND ABOVE
+int tls_poll(const char *host,
+                uint16_t port,
+                const char *request,
+                const char *body,
+                unsigned char *response,
+                size_t resp_size,
+                int showdebug,
+                int preset,
+                int amount,
+                int timing);
+
 You call tls_init, tls_connect, and tls_destroy, in that order. This has been smoothed out. When using tls4psp above 1.0.5, you can simply call tls_init(), and then tls_connect() as many times as you want, before going to tls_destroy().
 This uses very hard ciphers and curves for the Allegrex. This means there is a lot of compatibility, but handshakes can take up to 20 seconds on older versions!
 Testing shows roughly 10 - 15 seconds, but you never know.
@@ -35,6 +47,7 @@ Luckily, for more efficiency, on versions above 1.0.5, you can call tls_set_ligh
 ChaChaPoly increases CPU efficiency, and the ability to run sequential tls_connect() calls without tls_destroy() directly cuts connection times.
 On versions above 1.0.5, handshake time was reduced from 10 - 15 seconds to 3 - 5 seconds.
 
+Instructions:
 Fill a response buffer with the amount of bytes to be filled.
 For example,
 static unsigned char response[65536]; would allocate 64KB of space for the response.
@@ -89,4 +102,10 @@ EXAMPLES:
 
     SOCKETS:
     Sockets are for now blocking. This helps prevent a lot of race conditions, but it also means your program might be frozen for a few seconds while the handshake completes.
+
+    POLLING:
+    call tls_poll() the same way you would tls_connect(), but with 2 extra parameters, amount and timing.
+    amount is how many updates you will recieve, and timing is measured in seconds, and is how long to wait between sending the next request.
+    This is also blocking. To use it, you must put it in a different thread, then read from a global response.
+    Other than that, it works the exact same as tls_connect().
     
