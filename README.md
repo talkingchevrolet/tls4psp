@@ -1,34 +1,19 @@
-This code was tested in an emulator. May suffer on real hardware.
-tls4psp is a STATIC LIBRARY that allows for TLS connections and a variety of requests.
-It is made for compilation. You use the .h and compile just one file, the .a. But it requires specific psp libs to be linked IN YOUR EBOOT.PBP, SEPERATELY OF THE LIBRARY!
-Namely:
-    pspnet
-    pspnet_inet
-    pspnet_resolver
-    pspuser
-    psppower
-    pspnet_apctl
-    plus lc and lgcc as non PSPSDK libs.
-Now, other than that, it is designed to be relatively low friction.
-Your 4 commands:
-int tls_init(void);
-
-int tls_connect(const char *host,
-                uint16_t port,
-                const char *request,
-                const char *body,
-                unsigned char *response,
-                size_t resp_size,
-                int showdebug,
-                int preset);
-
-int tls_destroy(void);
-
-IF USING TLS4PSP ABOVE 1.0.5
-
-void tls_set_lightweight(int enable)
-
-IF USING TLS4PSP 1.3.8 AND ABOVE
+tls4psp is a small static library that allows for basic TLS and HTTP support on the PSP. It has been tested in an emulator, but may suffer on real hardware, especially on the PSP 1000 model, because of its low RAM.
+tls4psp is designed to be simple, and simple it is. It abstracts a large set of functions into a single command.
+On 1.0.5 and above, your flow will look like this:
+tls_init()
+tls_connect()
+tls_connect()
+tls_destroy() //when you are finished
+Note that use of 1.0.0 is not advised, as it has a small scope of certificates and no gzip support.
+tls_connect() CANNOT BE CALLED CONCURRENTLY, but it can be called repeatedly within the same thread.
+You do NOT have to call tls_destroy() after every tls_connect() call.
+Of course, there are also optional commands.
+When using tls4psp 1.2.5 and above, you have the option to do
+tls4psp_set_lightweight(int enable).
+If you set this to 1, you trade AES ciphers for lighter ChaChaPoly ciphers.
+if you don't set it, you get the default set.
+When using tls4psp 1.3.8 and above, you get another command.
 int tls_poll(const char *host,
                 uint16_t port,
                 const char *request,
@@ -39,73 +24,49 @@ int tls_poll(const char *host,
                 int preset,
                 int amount,
                 int timing);
+This allows for polling obviously, but it is blocking. To use it, fill out the first few commands exactly like in tls_connect, then
+set amount to however many times you want to poll and timing (in seconds) on how long to wait between polling.
+So, to use tls_connect:
+first set a response buffer. this is where your data will be written.
+unsigned char response[2048]; //this leaves some space in RAM to write your response.
+tls_init() // you MUST have this before tls_connect()
+int tls_connect(const char *host, //you set this to the host, for example www.example.com
+                uint16_t port, //you set this as the port used. Set this to 443, or set it to 0 for a shortcut.
+                const char *request, //set this as the path. For example, if you are polling example.com/gzip, you would put /gzip in the request section.
+                const char *body, //This is only for POST requests. For HTTP GET, leave this as NULL.
+                unsigned char *response, // the response buffer to be used
+                size_t resp_size, //the size of your buffer
+                int showdebug, //set this to 1 or 0, this is a useless artifact.
+                int preset); // set to 1 to use HTTP GET, set to 2 to use HTTP OPTIONS, set to 3 to use HTTP POST.
+When reading, do not directly read from tls_connect(), as that only shows the bytes as a number, not the bytes themselves.
+Read from the response buffer you set, as that is where the data is written. Make sure to null-terminate your response by doing
+response[bytes] = '\0';, with bytes being whatever you named your call of tls_connect().
+If the response is only "H", this is caused by a response buffer that is too small. Increase it.
+Now, you are all set, but what if you encounter errors?
+//Network errors
+#define NET_ERR_SOCKET_FAILED              -1 //this means the socket has enough memory but failed to create. Shouldn't happen.
+#define NET_ERR_SOCKET_CONNECTION_FAILED   -2 //Failed to connect to the resolved host
+#define NET_ERR_RESOLVE_GONE               -3 //Failed to create resolver instance
+#define NET_ERR_FAILED_TO_RESOLVE          -4 //Host could not be resolved. Did you set the host properly?
+#define NET_ERR_SOCKET_NO_MEM              -5 //Not enough free RAM to make a socket. Should never happen.
+#define NET_ERR_APCTL_TIMEOUT              -6 //Timed out when connecting to the internet.
+//tls errors
+#define TLS_ERR_STARTUP_ERROR              -50 //Misc error
+#define TLS_ERR_CERT_VERIFY_FAILED         -51 // note: -9984 is a related error from mbedtls. occurs when the website doesn't show a cert we recognize.
+#define TLS_ERR_FAILED_TO_SEND             -52 //For whatever reason, mbedtls could not send from the socket
+#define TLS_ERR_CANT_INITIALIZE            -53 //For whatever reason, the server was connected to, but TLS cannot initialize
+#define TLS_ERR_RESPONSE_WOULD_OVERFLOW    -54 //response buffer is malformed or too large/small
+#define TLS_ERR_CERT_FAILED_PARSE          -55 //the hardcoded certificates failed to be parsed and read.
+#define TLS_ERR_DRBG_FAILED_SEEDING        -56 //the DRBG could not seed from the entropy source. should not happen.
+#define TLS_ERR_HANDSHAKE_TIMEOUT          -57 //Handshake timed out. Check your internet speed or CPU.
+#define TLS_ERR_INVALID_PRESET             -58 //Invalid value put in the preset section of tls_connect().
+#define TLS_ERR_REQUEST_NO_MEM             -59 //Not enough free RAM to store and send the request. Should never happen.
+#define TLS_ERR_CURVE_FAILED               -60 //TLS curves could not be initialized. shouldn't happen.
+#define TLS_ERR_INVALID_CIPHER_SELECTION   -61 //invalid value passed to tls_set_lightweight(). It only accepts 0 or 1.
+#define TLS_ERR_BAD_ENTROPY_SELECTION      -62 //Not caused by the user, but for whatever reason, DRBG cannot accept the entropy source.
+//gzip errors
+#define PARSE_ERR_GZIP_DECOMPRESSOR_NO_MEM -100 //No free RAM to give the gzip decompressor. Should never happen.
+#define PARSE_ERR_GZIP_PRODUCT_NO_MEM      -101 //Not enough free RAM to store the product of decompression. Should never happen.
 
-You call tls_init, tls_connect, and tls_destroy, in that order. This has been smoothed out. When using tls4psp above 1.0.5, you can simply call tls_init(), and then tls_connect() as many times as you want, before going to tls_destroy().
-This uses very hard ciphers and curves for the Allegrex. This means there is a lot of compatibility, but handshakes can take up to 20 seconds on older versions!
-Testing shows roughly 10 - 15 seconds, but you never know.
-Luckily, for more efficiency, on versions above 1.0.5, you can call tls_set_lightweight(1) to use lighter ChaChaPoly ciphers, and sequential tls_connect calls as well.
-ChaChaPoly increases CPU efficiency, and the ability to run sequential tls_connect() calls without tls_destroy() directly cuts connection times.
-On versions above 1.0.5, handshake time was reduced from 10 - 15 seconds to 3 - 5 seconds.
-
-Instructions:
-Fill a response buffer with the amount of bytes to be filled.
-For example,
-static unsigned char response[65536]; would allocate 64KB of space for the response.
-Do not read the result directly from tls_connect, as that will only show you the amount of bytes it recieved, or an error code. Read from the response buffer.
-EXAMPLES:
-    int bytes1 = tls_connect(
-        "www.letsencrypt.org",
-        443,
-        "/",
-        NULL,
-        response1,
-        sizeof(response1) - 1,
-        1,
-        1
-    );
-    NOTE: body can be set to NULL because preset 1 is used (GET). Body is only needed for POST.
-    "/" just means there is nothing else to the url. When doing google.com/humans.txt, for example, /humans.txt would be where / is.
-    to show my point further:
-        int bytes2 = tls_connect(
-        "www.postman-echo.com",
-        443,
-        "/gzip",
-        NULL,
-        response2,
-        sizeof(response2) - 1,
-        1,
-        1
-    );
-    NOTE: gzip support is only for tls4psp v1.2.7
-
-
-    CERTIFICATES:
-    older tls4psp versions will see the error -9984 often with tls_connect().
-    That is a certificate error caused by a lack of root certificates in those versions.
-    tls4psp V1.2.8 and higher have 11 root certificates, from Let's Encrypt, DigiCert, and Google.
-    older models only have 9 root certificates,  from the same 3 providers.
-    Even on the latest versions, it is not enough to see the entire web with.
-
-    GZIP:
-    It is 100% supported, but sometimes you might see errors. If you see the HTTP headers, there is your error.
-    While error handling is a bit opaque, there are only 3 possible causes.
-    A: Bad data. The website simply isn't sending proper gzip.
-    B: The data would overrun the response buffer. Try allocating a bigger response.
-    C: Short output. Whatever it would have outputted would overflow. Has not been encountered so far. Be sane with your responses, please!
-    NOTE: Headers are not present when gzip handling succeeds. You will simply get the body.
-
-    HTTP:
-    GET (preset 1) OPTIONS (preset 2) and POST (preset 3).
-    GET and OPTIONS do not need the body variable. Set it to NULL.
-    POST does need it. DO NOT SET BODY TO NULL WHEN USING POST.
-    Note: If tls_connect() returns 0, this is most likely because the server rejected your request or sent an encoding which isn't supported. The only solution is to try again later.
-
-    SOCKETS:
-    Sockets are for now blocking. This helps prevent a lot of race conditions, but it also means your program might be frozen for a few seconds while the handshake completes.
-
-    POLLING:
-    call tls_poll() the same way you would tls_connect(), but with 2 extra parameters, amount and timing.
-    amount is how many updates you will recieve, and timing is measured in seconds, and is how long to wait between sending the next request.
-    This is also blocking. To use it, you must put it in a different thread, then read from a global response.
-    Other than that, it works the exact same as tls_connect().
-    
+Note: This is NOT thread-safe, and it is blocking. For doing multi-threaded operations, it is best to have a workaround, like mutexes, global buffers, it is up to you.
+Connections are closed after each request (no keep-alive support).
