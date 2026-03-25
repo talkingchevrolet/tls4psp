@@ -26,6 +26,13 @@ int tls_poll(const char *host,
                 int timing);
 This allows for polling obviously, but it is blocking. To use it, fill out the first few commands exactly like in tls_connect, then
 set amount to however many times you want to poll and timing (in seconds) on how long to wait between polling.
+FOR TLS4PSP 2.0.0 AND ABOVE:
+showdebug doesn't exist. You don't input anything where showdebug should have been.
+You also get 2 new optional commands:
+int tls_get_easy(const char *host, const char *path, unsigned char *response, size_t resp_size);
+int tls_post_easy(const char *host, const char *path, const char *body, unsigned char *response, size_t resp_size); //half the parameters removed
+Not only are half the parameters removed, tls_get_easy also supports redirects. (only 1 redirect currently, more later)
+Also, 2.0.0 is more compatible with the modern web, as it supports chunked transfer encoding.
 So, to use tls_connect:
 first set a response buffer. this is where your data will be written.
 unsigned char response[2048]; //this leaves some space in RAM to write your response.
@@ -36,7 +43,7 @@ int tls_connect(const char *host, //you set this to the host, for example www.ex
                 const char *body, //This is only for POST requests. For HTTP GET, leave this as NULL.
                 unsigned char *response, // the response buffer to be used
                 size_t resp_size, //the size of your buffer
-                int showdebug, //set this to 1 or 0, this is a useless artifact.
+                int showdebug, //set this to 1 or 0, this is a useless artifact that has been removed in tls4psp 2.0.0.
                 int preset); // set to 1 to use HTTP GET, set to 2 to use HTTP OPTIONS, set to 3 to use HTTP POST.
 When reading, do not directly read from tls_connect(), as that only shows the bytes as a number, not the bytes themselves.
 Read from the response buffer you set, as that is where the data is written. Make sure to null-terminate your response by doing
