@@ -33,6 +33,12 @@ int tls_get_easy(const char *host, const char *path, unsigned char *response, si
 int tls_post_easy(const char *host, const char *path, const char *body, unsigned char *response, size_t resp_size); //half the parameters removed
 Not only are half the parameters removed, tls_get_easy also supports redirects. (only 1 redirect currently, more later)
 Also, 2.0.0 is more compatible with the modern web, as it supports chunked transfer encoding.
+2.50 gets 2 new commands as well:
+tls_connect_nb()
+tls_poll_nb()
+same parameters and everything, but with a non-blocking socket.
+tls_poll_nb utilizes threading to deliver almost seamless polling.
+2.50 also has significantly improved handling of port 80.
 So, to use tls_connect:
 first set a response buffer. this is where your data will be written.
 unsigned char response[2048]; //this leaves some space in RAM to write your response.
@@ -77,7 +83,7 @@ Now, you are all set, but what if you encounter errors?
 
 
 To compile:
-Compile the static library in and include the .h file.
+Compile the static library in (ltls4psp in a makefile) and include the .h file.
 You must also compile with lc, lgcc, and these PSPSDK libs:
     pspnet
     pspnet_inet
@@ -87,4 +93,5 @@ You must also compile with lc, lgcc, and these PSPSDK libs:
     pspnet_apctl
 And then it should compile normally in a makefile.
 Note: This is NOT thread-safe, and it is blocking. For doing multi-threaded operations, it is best to have a workaround, like mutexes, global buffers, it is up to you.
+2.50 allieviates this strain slightly.
 Connections are closed after each request (no keep-alive support).
